@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            button {
+                background: #FF3951 0 0 no-repeat padding-box;
+                border-radius: 100px;
+
+                box-shadow: 0 5px 15px #00000029;
+                color: #F4F4F4;
+                font-weight: 500;
+                text-align: center;
+                font-size: 1em;
+                padding: 0.5em 1.5em;
+                margin: 0.5em;
+                letter-spacing: 0.04em;
+                outline: none;
+
+                cursor: pointer;
+            }
+        </style>
+    </head>
+    <body>
+        <button id="update-spreadsheet-simplified">Update spreadsheet &ndash; simplified version</button>
+        <button id="update-spreadsheet-full">Update spreadsheet &ndash; full version</button>
+
+        <p id="status"></p>
+
+        <script src="browser-polyfill.js"></script>
+        <script src="popup.js"></script>
+    </body>
+</html>
