@@ -27,13 +27,6 @@
     "scripts": ["background.js", "browser-polyfill.js"]
   },
 
-  "content_scripts": [
-    {
-      "matches": ["https://*.footballindex.co.uk/*"],
-      "js": ["content.js", "browser-polyfill.js"]
-    }
-  ],
-
   "permissions": [
     "https://*.footballindex.co.uk/*",
     "https://*.footietracker.com/*",
