@@ -31,7 +31,7 @@ module.exports = {
             ]
         },
         plugins: [
-            new CleanWebpackPlugin(distDirectoryPath, { exclude: ['popup.html', 'manifest.json'] }),
+            new CleanWebpackPlugin(distDirectoryPath, { exclude: ['manifest.json'] }),
             // So we don't load all the locale files into the bundle
             // Significantly reduces the bundle size
             new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
