@@ -5,17 +5,8 @@ import { getFullPortfolio } from "./full-portfolio";
 import { getSimplifiedPortfolio } from "./simplified-portfolio";
 
 async function getAccessToken(): Promise<string> {
-    // Get current open tab
-    const tab = (await browser.tabs.query({
-        currentWindow: true,
-        active: true,
-    }))[0];
-
-    if(tab.id === undefined) {
-        throw new Error('No tab open');
-    }
-
-    return <string> await browser.tabs.sendMessage(tab.id, MessageType.GetAccessToken);
+    const cookie = await browser.cookies.get({ url: 'https://www.footballindex.co.uk', name: 'auth-token' });
+    return cookie.value;
 }
 
 type SendPortfolioResponse = { error?: string | null };
@@ -43,7 +34,7 @@ export function addBackgroundListener(): void {
             case MessageType.UpdateSpreadsheetSimplified:
                 busyUpdating = true;
                 const accessToken = await getAccessToken();
-                const cookie = await browser.cookies.get({ url: 'https://footietracker.com', name: 'jwt' });
+                // const cookie = await browser.cookies.get({ url: 'https://footietracker.com', name: 'jwt' });
 
                 let portfolio: Portfolio;
                 if(message === MessageType.UpdateSpreadsheetFull) {
@@ -52,11 +43,13 @@ export function addBackgroundListener(): void {
                     portfolio = await getSimplifiedPortfolio(accessToken);
                 }
 
-                const response = await sendPortfolio(portfolio, cookie);
+                console.log(portfolio);
+
+                // const response = await sendPortfolio(portfolio, cookie);
 
                 busyUpdating = false;
                 finishedUpdating = true;
-                errorMessage = response.error !== undefined ? response.error : null;
+                // errorMessage = response.error !== undefined ? response.error : null;
                 break;
             case MessageType.GetStatus:
                 return [busyUpdating, finishedUpdating, errorMessage];

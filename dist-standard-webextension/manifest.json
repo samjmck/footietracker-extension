@@ -1,6 +1,6 @@
 {
   "manifest_version": 2,
-  "name": "Footietracker portfolio updater",
+  "name": "Footietracker",
   "short_name": "Footietracker",
   "version": "1.0",
   "icons": {
@@ -9,7 +9,7 @@
     "128": "icons/logo_short_128.png"
   },
 
-  "description": "Updates your current Footietracker portfolio by sending your FootballIndex portfolio to your Footietracker account",
+  "description": "Updates your Footietracker spreadsheet with your current Football Index portfolio",
   "author": "Sam Mckenzie",
   "homepage_url": "https://footietracker.com",
 
@@ -36,10 +36,7 @@
 
   "permissions": [
     "https://*.footballindex.co.uk/*",
-    "https://api-prod.footballindex.co.uk/*",
     "https://*.footietracker.com/*",
-    "activeTab",
-    "tabs",
     "cookies"
   ]
 }

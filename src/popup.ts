@@ -18,6 +18,7 @@ if(exportSpreadsheetFullButton !== null && exportSpreadsheetSimplifiedButton !==
     setStatus();
 
     exportSpreadsheetSimplifiedButton.addEventListener('click', async event => {
+        console.log('Updating spreadsheet simplified button clicked');
         statusElement.innerText = 'Updating spreadsheet...';
 
         await browser.runtime.sendMessage(MessageType.UpdateSpreadsheetSimplified);
@@ -26,6 +27,7 @@ if(exportSpreadsheetFullButton !== null && exportSpreadsheetSimplifiedButton !==
     });
 
     exportSpreadsheetFullButton.addEventListener('click', async event => {
+        console.log('Updating spreadsheet full button clicked');
         statusElement.innerText = 'Updating spreadsheet...';
 
         await browser.runtime.sendMessage(MessageType.UpdateSpreadsheetFull);

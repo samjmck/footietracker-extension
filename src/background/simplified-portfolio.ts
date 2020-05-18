@@ -41,10 +41,7 @@ export async function getSimplifiedPortfolio(accessToken: string): Promise<Portf
             name: item.name,
             playerId: item.id,
             quantity: item.qty + item.sellqty,
-            // TODO: double check
-            // is item.sellvalue the value of the shares at this moment or the price the
-            // user paid for them?
-            totalPrice: item.price * 100 * item.qty + item.sellvalue * 100 * item.sellqty,
+            totalPrice: item.price * 100 * (item.qty + item.sellqty),
         });
     }
 

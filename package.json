@@ -1,7 +1,7 @@
 {
    "author": "Sam Mckenzie",
    "scripts": {
-      "build": "echo 'PRODUCTION MODE'; webpack --config webpack.chrome.js; webpack --config webpack.standard-webextension.js"
+      "build": "./node_modules/.bin/webpack --config webpack.chrome.js; ./node_modules/.bin/webpack --config webpack.standard-webextension.js"
    },
    "devDependencies": {
       "@types/chrome": "0.0.88",
@@ -10,7 +10,7 @@
       "moment": "^2.24.0",
       "ts-loader": "^6.2.2",
       "typescript": "^3.8.3",
-      "webextension-polyfill-ts": "^0.9.1",
+      "webextension-polyfill-ts": "^0.14.0",
       "webpack": "^4.42.1",
       "webpack-cli": "^3.3.11"
    },

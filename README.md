@@ -2,12 +2,13 @@
 
 ## Build yourself
 
+This extension uses webpack to package the JS files so I can use the moment package and have a better developer experience. This package also uses the TypeScript wrapped version of [browser-polyfill](https://github.com/Lusito/webextension-polyfill-ts) by Mozilla to be compatible with as many browsers as possible.
+
 To build the extension yourself, do the following:
 
-1. Clone the repository by running `git clone https://github.com/samjmckenzie/Footietracker-portfolio-updater.git`
-2. Change directory to the clone by running `cd Footietracker-portfolio-updater`
-3. Install npm modules by entering the following: `npm install`
-4. For Chrome, run `webpack --config webpack.chrome.js`. The build will be in the `dist-chrome` directory. For Edge or Firefox, run `webpack --config webpack.standard-webextension.js`. The build will be in the `dist-standard-webextension` directory.
+1. If you don't have the source code, clone the repository by running `git clone https://github.com/samjmckenzie/footietracker-extension.git` and change directory to the source code folder
+2. Install npm modules by entering the following: `npm install`
+3. For Edge or Firefox, run `webpack --config webpack.standard-webextension.js`. The build will be in the `dist-standard-webextension` directory. For Chrome, run `webpack --config webpack.chrome.js`. The build will be in the `dist-chrome` directory.
 
 ## How does it work?
 

@@ -7,7 +7,6 @@ module.exports = {
     getCommonOptions: (backgroundFilePath, distDirectoryPath) => ({
         mode: 'production',
         entry: {
-            content: `${__dirname}/src/content.ts`,
             popup: `${__dirname}/src/popup.ts`,
             background: backgroundFilePath,
         },
