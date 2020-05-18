@@ -8,7 +8,7 @@ To build the extension yourself, do the following:
 
 1. If you don't have the source code, clone the repository by running `git clone https://github.com/samjmckenzie/footietracker-extension.git` and change directory to the source code folder
 2. Install npm modules by entering the following: `npm install`
-3. For Edge or Firefox, run `webpack --config webpack.standard-webextension.js`. The build will be in the `dist-standard-webextension` directory. For Chrome, run `webpack --config webpack.chrome.js`. The build will be in the `dist-chrome` directory.
+3. For Firefox, run `webpack --config webpack.standard-webextension.js`. The build will be in the `dist-standard-webextension` directory. For Chrome or Edge, run `webpack --config webpack.chrome.js`. The build will be in the `dist-chrome` directory.
 
 ## How does it work?
 
