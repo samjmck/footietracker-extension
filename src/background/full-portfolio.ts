@@ -1,8 +1,7 @@
 import * as moment from 'moment';
 import 'moment/locale/en-gb';
-import { getPlayerId } from "../../../shared/util/names";
-import { ExpiringShare, Portfolio } from "../../../shared/backend/src/service/spreadsheets/interfaces";
 import { getSimplifiedPortfolio } from "./simplified-portfolio";
+import { ExpiringShare, Portfolio } from "../interfaces";
 
 enum TradeLabel {
     MarketBuy = 'Market Buy',

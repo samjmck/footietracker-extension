@@ -1,4 +1,4 @@
-import { Portfolio } from "../../../shared/backend/src/service/spreadsheets/interfaces";
+import { Portfolio } from "../interfaces";
 
 interface SummaryResponse {
     totals: {
