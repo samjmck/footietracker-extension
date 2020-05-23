@@ -4,182 +4,152 @@ import { getPlayerId } from "../../../shared/util/names";
 import { ExpiringShare, Portfolio } from "../../../shared/backend/src/service/spreadsheets/interfaces";
 import { getSimplifiedPortfolio } from "./simplified-portfolio";
 
-enum TransactionType {
-    Sell,
-    Buy,
+enum TradeLabel {
+    MarketBuy = 'Market Buy',
+    SellQueue = 'Sell Queue',
+    InstantSell = 'Instant Sell',
+    MatchedInstantSell = 'Matched Instant Sell',
+    Sale = 'Sale',
 }
 
-export type RawTransactionType =
-    'SALE' |
-    'COMMISSION' |
-    'Media Dividends' |
-    'Match Day Dividends' |
-    'PURCHASE' |
-    'Unsold' |
-    'In-Play Dividends' |
-    'CLOSED_ORDER_CANCELLED' |
-    'STOCK_SPLIT';
-
-interface TransactionItem {
-    type: TransactionType;
-    rawType: RawTransactionType;
-    playerId: string;
-    name: string;
-    quantity: number;
-    totalPrice: number;
-    time: number;
+enum TradeType {
+    Purchase = 'purchase',
+    Sale = 'sale',
 }
 
-interface TransactionsResponse {
+interface TradeResponse {
     count: number;
-    items: {
-        balance: number;
-        id: number;
-        tradeId: number;
-        userId: number;
-        name: string;
-        total: number;
-        qty: number;
-        type: RawTransactionType;
-        transactiondate: string;
-    }[];
+    items: TradeItem[];
     page: number;
     per_page: number;
     total: number;
 }
 
-// Gets the transactions of a certain page of your transaction history and converts
-// the details of those transactions to a more readable format
-// Keep in mind the transactions and pages are listed from newest to oldest
-async function getTransactionHistory(accessToken: string, page: number, perPage: number): Promise<{
-    items: TransactionItem[];
-    loopedThrough: number;
+interface TradeItem {
+    id: number;
+    celebrityId: number;
+    userId: number;
+    sharePrice: number;
+    shareQty: number;
     total: number;
-    stockSplitAfterIndex?: number;
-}> {
-    // console.log(`Loading ${perPage} entries on page ${page}`);
-    const data = <TransactionsResponse> await (await fetch(`https://api-prod.footballindex.co.uk/transactions?page=${page}&per_page=${perPage}`, {
-        headers: {
-            'x-access-token': accessToken,
-            'x-client-type': 'responsive-tablet',
-            'Referer': 'https://www.footballindex.co.uk/stockmarket/account/transactions',
-            'Accept': 'application/json, text/plain, */*',
-        },
-    })).json();
-
-    let loopedThrough = 0;
-    let stockSplitAfterIndex: number | undefined;
-    const transactionItems: TransactionItem[] = [];
-    for(const item of data.items) {
-        switch(item.type) {
-            case 'PURCHASE':
-            case 'SALE':
-                const transactionItem: TransactionItem = {
-                    type: item.type === 'PURCHASE' ? TransactionType.Buy : TransactionType.Sell,
-                    playerId: getPlayerId(item.name),
-                    quantity: item.qty,
-                    totalPrice: item.total,
-                    time: moment.utc(item.transactiondate, 'YYYY-MM-DDTHH:mm:ss.SSSSZ').valueOf(),
-                    name: item.name,
-                    rawType: item.type,
-                };
-                transactionItems.push(transactionItem);
-                // console.log(`[${loopedThrough}] Adding transaction with type ${item.type}`);
-                // console.log(transactionItem);
-                break;
-            case 'STOCK_SPLIT':
-                // console.log(`[${loopedThrough}] Found stock split`);
-                stockSplitAfterIndex = transactionItems.length;
-                break;
-            default:
-                // console.log(`[${loopedThrough}] Unknown item type "${item.type}"`);
-        }
-        // console.log(item);
-        loopedThrough++;
-    }
-
-    // console.log('\n\n');
-
-    return {
-        items: transactionItems,
-        loopedThrough,
-        stockSplitAfterIndex,
-        total: data.total,
-    };
+    status: string;
+    type: TradeType;
+    orderType: string;
+    meta?: any;
+    txDate: string;
+    createdAt: string;
+    isPartialFill: boolean;
+    exchangeOrderUuid?: any;
+    label: TradeLabel;
+    updatedAt: string;
+    code: string;
+    thumbnailImage: string;
+    profileImage: string;
+    price: number;
+    name: string;
 }
 
-export async function getFullPortfolio(accessToken: string): Promise<Portfolio> {
-    const expiringSharesByPlayerId: { [playerId: string]: ExpiringShare[] } = {};
-    const expiringQuantities: { [playerId: string]: number } = {};
+interface Trade {
+    name: string;
+    playerId: string;
+    time: number;
+    quantity: number;
+    totalPrice: number;
+    type: TradeType;
+}
 
-    const portfolio = await getSimplifiedPortfolio(accessToken);
+async function getTrades(accessToken: string): Promise<Trade[]> {
+    const trades: Trade[] = [];
 
-    const quantities: { [playerId: string]: number } = {};
-    const portfolioCurrentPlayerIds: string[] = [];
-    for(const share of portfolio.shares) {
-        portfolioCurrentPlayerIds.push(share.playerId);
-        quantities[share.playerId] = share.quantity;
-        // console.log(`Quantity ${share.quantity} for ${share.playerId}`)
+    let noTradesLeft = false;
+    let page = 1;
+    while(!noTradesLeft) {
+        const tradeResponse = <TradeResponse> await (await fetch(`https://api-prod.footballindex.co.uk/trades?page=${page++}&per_page=1000`, {
+            headers: {
+                'x-access-token': accessToken,
+                'x-client-type': 'responsive-tablet',
+                'Referer': 'https://www.footballindex.co.uk/account/trades',
+                'Accept': 'application/json, text/plain, */*',
+            },
+        })).json();
+
+        if(tradeResponse.items.length === 0) {
+            noTradesLeft = true;
+            break;
+        }
+
+        for(const tradeItem of tradeResponse.items) {
+            trades.push({
+                name: tradeItem.name,
+                playerId: tradeItem.code,
+                time: moment(tradeItem.txDate).unix(),
+                type: tradeItem.type,
+                totalPrice: Math.round(tradeItem.total * 100),
+                quantity: tradeItem.shareQty,
+            });
+        }
     }
 
-    let quantityMultiplier = 1;
-    let page = 1;
-    let stopCheckingPlayerIds: string[] = [];
-    while(stopCheckingPlayerIds.length < portfolioCurrentPlayerIds.length) {
-        const { items, stockSplitAfterIndex } = await getTransactionHistory(accessToken, page++, 200);
-        let index = 0;
-        for(const item of items) {
-            const { playerId } = item;
+    return trades;
+}
 
-            if(stockSplitAfterIndex !== undefined && index > stockSplitAfterIndex) {
-                quantityMultiplier = 3;
-            }
-            index++;
+const shareSplits: { time: number, split: number }[] = [
+    {
+        time: 1553558400, // 26 March 2019
+        split: 3,
+    },
+];
 
+export async function getFullPortfolio(accessToken: string): Promise<Portfolio> {
+    // Sort trades from new to old
+    const trades = (await getTrades(accessToken)).sort((a, b) => b.time - a.time);
 
-            if(
-                // This player is currently not in the portfolio
-                portfolioCurrentPlayerIds.indexOf(playerId) === -1 ||
-                // or this player has already been fully checked
-                stopCheckingPlayerIds.indexOf(playerId) > -1
-            ) {
-                continue;
-            }
+    const quantityByPlayerId: { [playerId: string]: number } = {};
+    const checkedQuantityByPlayerId: { [playerId: string]: number } = {};
+    const checkPlayerIds: string[] = [];
+    const stopCheckingPlayerIds: string[] = [];
 
-            // Initialise expiring variables for this playerId
-            if(expiringSharesByPlayerId[playerId] === undefined) {
-                expiringSharesByPlayerId[playerId] = [];
-                expiringQuantities[playerId] = 0;
-            }
+    const simplifiedPortfolio = await getSimplifiedPortfolio(accessToken);
+    for(const { playerId, quantity } of simplifiedPortfolio.shares) {
+        quantityByPlayerId[playerId] = quantity;
+        checkedQuantityByPlayerId[playerId] = 0;
+        checkPlayerIds.push(playerId);
+    }
 
-            if(item.type === TransactionType.Buy) {
-                expiringSharesByPlayerId[playerId].push({
-                    name: item.name,
-                    quantity: item.quantity * quantityMultiplier,
-                    totalPrice: item.totalPrice * 100,
-                    buyTime: item.time,
-                });
-                expiringQuantities[playerId] += item.quantity * quantityMultiplier;
-                // console.log(`Expiring quantities for ${playerId} is at ${expiringQuantities[playerId]}`);
+    const expiringShares: ExpiringShare[] = [];
+    for(const trade of trades) {
+        const { playerId } = trade;
+        if(trade.type === TradeType.Sale || stopCheckingPlayerIds.indexOf(playerId) > -1 || checkPlayerIds.indexOf(playerId) === -1) {
+            continue;
+        }
 
-                if(expiringQuantities[playerId] > quantities[playerId]) {
-                    if(expiringSharesByPlayerId[playerId].length > 1) {
-                        expiringSharesByPlayerId[playerId][expiringSharesByPlayerId[playerId].length - 1].quantity = quantities[playerId] - expiringSharesByPlayerId[playerId].slice(0, -1).reduce((quantity, currentShare) => quantity + currentShare.quantity, 0);
-                    } else {
-                        expiringSharesByPlayerId[playerId][expiringSharesByPlayerId[playerId].length - 1].quantity = quantities[playerId];
-                    }
-                    stopCheckingPlayerIds.push(playerId);
-                } else if(expiringQuantities[playerId] === quantities[playerId]) {
-                    stopCheckingPlayerIds.push(playerId);
-                }
+        for(const shareSplit of shareSplits) {
+            if(trade.time < shareSplit.time) {
+                trade.quantity = trade.quantity * shareSplit.split;
             }
         }
-        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        const quantity = checkedQuantityByPlayerId[playerId] + trade.quantity > quantityByPlayerId[playerId] ? quantityByPlayerId[playerId] - checkedQuantityByPlayerId[playerId] : trade.quantity;
+        expiringShares.push({
+            name: trade.name,
+            quantity,
+            totalPrice: Math.round((trade.totalPrice / trade.quantity) * quantity),
+            buyTime: trade.time,
+        });
+
+        checkedQuantityByPlayerId[playerId] += trade.quantity;
+
+        if(checkedQuantityByPlayerId[playerId] >= quantityByPlayerId[playerId]) {
+            stopCheckingPlayerIds.push(trade.playerId);
+
+            if(stopCheckingPlayerIds.length === checkPlayerIds.length) {
+                break;
+            }
+        }
     }
 
-    for(const playerId in expiringSharesByPlayerId) {
-        portfolio.expiringShares.push(...expiringSharesByPlayerId[playerId]);
-    }
-
-    return portfolio;
+    return {
+        shares: simplifiedPortfolio.shares,
+        expiringShares,
+    };
 }

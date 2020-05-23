@@ -2,9 +2,13 @@
 <html>
     <head>
         <style>
+            body {
+                min-width: 175px;
+            }
             button {
                 background: #FF3951 0 0 no-repeat padding-box;
                 border-radius: 100px;
+                border: none;
 
                 box-shadow: 0 5px 15px #00000029;
                 color: #F4F4F4;
@@ -19,13 +23,20 @@
 
                 cursor: pointer;
             }
+            div#logged-in {
+                display: none;
+            }
         </style>
     </head>
     <body>
-        <button id="update-spreadsheet-simplified">Update spreadsheet &ndash; simplified version</button>
-        <button id="update-spreadsheet-full">Update spreadsheet &ndash; full version</button>
+        <div id="logged-in">
+            <button id="update-spreadsheet-simplified">Update spreadsheet &ndash; simplified version</button>
+            <button id="update-spreadsheet-full">Update spreadsheet &ndash; full version</button>
 
-        <p id="status"></p>
+            <p id="status"></p>
+        </div>
+        <div id="login-footballindex">Please login to Football Index.</div>
+        <div id="login-footietracker">Please login to Footietracker.</div>
 
         <script src="browser-polyfill.js"></script>
         <script src="popup.js"></script>

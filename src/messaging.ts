@@ -3,4 +3,6 @@ export enum MessageType {
     UpdateSpreadsheetSimplified,
     GetStatus,
     GetAccessToken,
+    IsLoggedIntoFootballIndex,
+    IsLoggedIntoFootietracker,
 }

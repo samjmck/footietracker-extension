@@ -4,17 +4,28 @@ import { Portfolio } from "../../../shared/backend/src/service/spreadsheets/inte
 import { getFullPortfolio } from "./full-portfolio";
 import { getSimplifiedPortfolio } from "./simplified-portfolio";
 
-async function getAccessToken(): Promise<string> {
+async function getAccessToken(): Promise<string | null> {
     const cookie = await browser.cookies.get({ url: 'https://www.footballindex.co.uk', name: 'auth-token' });
+    if(cookie === null) {
+        return null;
+    }
+    return cookie.value;
+}
+
+async function getFootietrackerJWT(): Promise<string | null> {
+    const cookie = await browser.cookies.get({ url: 'https://footietracker.com', name: 'jwt' });
+    if(cookie === null) {
+        return null;
+    }
     return cookie.value;
 }
 
 type SendPortfolioResponse = { error?: string | null };
 
-async function sendPortfolio(portfolio: Portfolio, jwtCookie: Cookies.Cookie): Promise<SendPortfolioResponse> {
-    return <SendPortfolioResponse> await (await fetch('https://api.footietracker.com/users/send_portfolio', {
+async function sendPortfolio(portfolio: Portfolio, jwt: string): Promise<SendPortfolioResponse> {
+    return <SendPortfolioResponse> await (await fetch('https://footietracker.com/api/users/send_portfolio', {
         headers: {
-            cookie: `jwt=${jwtCookie.value}`,
+            cookie: `jwt=${jwt}`,
             'Content-Type': 'application/json',
         },
         method: 'POST',
@@ -25,16 +36,30 @@ async function sendPortfolio(portfolio: Portfolio, jwtCookie: Cookies.Cookie): P
 export function addBackgroundListener(): void {
     let busyUpdating = false;
     let finishedUpdating = false;
-    let errorMessage: string | null = null;
+    let statusMessage: string = '';
 
     // @ts-ignore
     browser.runtime.onMessage.addListener(async message => {
         switch(message) {
+            case MessageType.IsLoggedIntoFootballIndex:
+                return (await getAccessToken()) !== null;
+            case MessageType.IsLoggedIntoFootietracker:
+                return (await getFootietrackerJWT()) !== null;
             case MessageType.UpdateSpreadsheetFull:
             case MessageType.UpdateSpreadsheetSimplified:
                 busyUpdating = true;
+                finishedUpdating = false;
+                statusMessage = 'Updating spreadsheet...';
+
                 const accessToken = await getAccessToken();
-                // const cookie = await browser.cookies.get({ url: 'https://footietracker.com', name: 'jwt' });
+                if(accessToken === null) {
+                    return;
+                }
+
+                const footietrackerJWT = await getFootietrackerJWT();
+                if(footietrackerJWT === null) {
+                    return;
+                }
 
                 let portfolio: Portfolio;
                 if(message === MessageType.UpdateSpreadsheetFull) {
@@ -43,16 +68,19 @@ export function addBackgroundListener(): void {
                     portfolio = await getSimplifiedPortfolio(accessToken);
                 }
 
-                console.log(portfolio);
-
-                // const response = await sendPortfolio(portfolio, cookie);
+                const response = await sendPortfolio(portfolio, footietrackerJWT);
 
                 busyUpdating = false;
                 finishedUpdating = true;
-                // errorMessage = response.error !== undefined ? response.error : null;
+                message = response.error !== undefined ? response.error : 'Successfully updated spreadsheet.';
+                // statusMessage = 'Successfully updated spreadsheet.';
                 break;
             case MessageType.GetStatus:
-                return [busyUpdating, finishedUpdating, errorMessage];
+                return {
+                    busyUpdating,
+                    finishedUpdating,
+                    statusMessage,
+                };
         }
     });
 }

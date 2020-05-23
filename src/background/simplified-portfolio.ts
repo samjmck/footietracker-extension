@@ -15,7 +15,7 @@ interface SummaryResponse {
 
 // This function returns a Portfolio object that will have an empty array as its expiredShares field
 // The reason for this is because this function use the same data source as the "portfolio" page on
-// FootballIndex which does not include any purchase dates, so it is not possible to calculate when
+// Football Index which does not include any purchase dates, so it is not possible to calculate when
 // shares expire.
 // The getFullPortfolio function will go through the transaction history of the account where more
 // data can be used. However, its shares field will be identical to the shares field of this
@@ -41,7 +41,7 @@ export async function getSimplifiedPortfolio(accessToken: string): Promise<Portf
             name: item.name,
             playerId: item.id,
             quantity: item.qty + item.sellqty,
-            totalPrice: item.price * 100 * (item.qty + item.sellqty),
+            totalPrice: Math.round(item.price * 100 * (item.qty + item.sellqty)),
         });
     }
 
