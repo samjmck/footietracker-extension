@@ -81,7 +81,7 @@ async function getTrades(accessToken: string): Promise<Trade[]> {
             trades.push({
                 name: tradeItem.name,
                 playerId: tradeItem.code,
-                time: moment(tradeItem.txDate).unix(),
+                time: moment(tradeItem.txDate).valueOf(),
                 type: tradeItem.type,
                 totalPrice: Math.round(tradeItem.total * 100),
                 quantity: tradeItem.shareQty,
