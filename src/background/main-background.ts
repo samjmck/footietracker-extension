@@ -1,6 +1,6 @@
 import { browser, Cookies } from "webextension-polyfill-ts";
 import { MessageType } from "../messaging";
-import { Portfolio } from "../../../shared/backend/src/service/spreadsheets/interfaces";
+import { Portfolio } from "../interfaces";
 import { getFullPortfolio } from "./full-portfolio";
 import { getSimplifiedPortfolio } from "./simplified-portfolio";
 
