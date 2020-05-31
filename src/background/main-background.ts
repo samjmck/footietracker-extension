@@ -1,4 +1,4 @@
-import { browser, Cookies } from "webextension-polyfill-ts";
+import { browser } from "webextension-polyfill-ts";
 import { MessageType } from "../messaging";
 import { Portfolio } from "../interfaces";
 import { getFullPortfolio } from "./full-portfolio";
@@ -20,17 +20,15 @@ async function getFootietrackerJWT(): Promise<string | null> {
     return cookie.value;
 }
 
-type SendPortfolioResponse = { error?: string | null };
-
-async function sendPortfolio(portfolio: Portfolio, jwt: string): Promise<SendPortfolioResponse> {
-    return <SendPortfolioResponse> await (await fetch('https://footietracker.com/api/users/send_portfolio', {
+async function sendPortfolio(portfolio: Portfolio, jwt: string): Promise<void> {
+    await fetch('https://footietracker.com/api/users/send_portfolio', {
         headers: {
             cookie: `jwt=${jwt}`,
             'Content-Type': 'application/json',
         },
         method: 'POST',
         body: JSON.stringify({ portfolio }),
-    })).json();
+    });
 }
 
 export function addBackgroundListener(): void {
@@ -68,12 +66,11 @@ export function addBackgroundListener(): void {
                     portfolio = await getSimplifiedPortfolio(accessToken);
                 }
 
-                const response = await sendPortfolio(portfolio, footietrackerJWT);
+                await sendPortfolio(portfolio, footietrackerJWT);
 
                 busyUpdating = false;
                 finishedUpdating = true;
-                message = response.error !== undefined ? response.error : 'Successfully updated spreadsheet.';
-                // statusMessage = 'Successfully updated spreadsheet.';
+                statusMessage = 'Successfully updated spreadsheet.';
                 break;
             case MessageType.GetStatus:
                 return {

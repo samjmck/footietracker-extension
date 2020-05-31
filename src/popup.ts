@@ -19,7 +19,9 @@ const statusElement = document.getElementById('status');
         statusElement !== null
     ) {
         const setStatus = async () => {
-            const { busyUpdating, finishedUpdating, statusMessage } = await browser.runtime.sendMessage(MessageType.GetStatus);
+            const message = await browser.runtime.sendMessage(MessageType.GetStatus);
+            console.log(message);
+            const { busyUpdating, finishedUpdating, statusMessage } = message;
             if (busyUpdating && !finishedUpdating) {
                 statusElement.innerText = statusMessage;
             } else if (!busyUpdating && finishedUpdating) {
@@ -45,7 +47,6 @@ const statusElement = document.getElementById('status');
         setStatus();
 
         exportSpreadsheetSimplifiedButton.addEventListener('click', async event => {
-            console.log('Updating spreadsheet simplified button clicked');
             statusElement.innerText = 'Updating spreadsheet...';
 
             await browser.runtime.sendMessage(MessageType.UpdateSpreadsheetSimplified);
@@ -54,7 +55,6 @@ const statusElement = document.getElementById('status');
         });
 
         exportSpreadsheetFullButton.addEventListener('click', async event => {
-            console.log('Updating spreadsheet full button clicked');
             statusElement.innerText = 'Updating spreadsheet...';
 
             await browser.runtime.sendMessage(MessageType.UpdateSpreadsheetFull);
