@@ -1,7 +1,7 @@
 {
    "author": "Sam Mckenzie",
    "scripts": {
-      "build": "./node_modules/.bin/webpack --config webpack.chrome.js; ./node_modules/.bin/webpack --config webpack.standard-webextension.js"
+      "build": "webpack --config webpack.chrome.js; webpack --config webpack.standard-webextension.js"
    },
    "dependencies": {
       "@types/chrome": "0.0.88",
