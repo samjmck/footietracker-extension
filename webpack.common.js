@@ -35,20 +35,22 @@ module.exports = {
             // So we don't load all the locale files into the bundle
             // Significantly reduces the bundle size
             new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
-            new CopyWebpackPlugin([
-                {
-                    from: `${__dirname}/src/popup.html`,
-                    to: distDirectoryPath,
-                },
-                {
-                    from: `${__dirname}/node_modules/webextension-polyfill/dist/browser-polyfill.js`,
-                    to: distDirectoryPath,
-                },
-                {
-                    from: `${__dirname}/icons`,
-                    to: `${distDirectoryPath}/icons`,
-                }
-            ]),
+            new CopyWebpackPlugin({
+                patterns: [
+                    {
+                        from: `${__dirname}/src/popup.html`,
+                        to: distDirectoryPath,
+                    },
+                    {
+                        from: `${__dirname}/node_modules/webextension-polyfill/dist/browser-polyfill.js`,
+                        to: distDirectoryPath,
+                    },
+                    {
+                        from: `${__dirname}/icons`,
+                        to: `${distDirectoryPath}/icons`,
+                    }
+                ]
+            }),
         ],
     }),
 };
