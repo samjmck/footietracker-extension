@@ -23,6 +23,12 @@
 
                 cursor: pointer;
             }
+            p#mode {
+                display: none;
+            }
+            button#change-mode {
+                display: none;
+            }
             div#logged-in {
                 display: none;
             }
@@ -32,7 +38,8 @@
         <div id="logged-in">
             <button id="update-spreadsheet-simplified">Update spreadsheet &ndash; simplified version</button>
             <button id="update-spreadsheet-full">Update spreadsheet &ndash; full version</button>
-
+            <button id="change-mode">Change mode</button>
+            <p id="mode"></p>
             <p id="status"></p>
         </div>
         <div id="login-footballindex">Please login to Football Index.</div>
