@@ -40,6 +40,7 @@ async function sendPortfolio(apiDomain: string, portfolio: Portfolio, jwt: strin
         },
         method: 'POST',
         body: JSON.stringify({ portfolio }),
+        credentials: 'include',
     });
 }
 
