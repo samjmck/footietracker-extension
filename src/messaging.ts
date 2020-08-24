@@ -16,9 +16,9 @@ export enum Mode {
 }
 
 export const apiDomainByMode: {[mode: string]: string} = {
-    [Mode.Dev]: 'dev.footietracker.com/dev-api',
-    [Mode.Staging]: 'staging.footietracker.com/staging-api',
-    [Mode.Prod]: 'footietracker.com/api',
+    [Mode.Dev]: 'dev.footietracker.com/api/v1',
+    [Mode.Staging]: 'staging.footietracker.com/api/v1',
+    [Mode.Prod]: 'footietracker.com/api/v1',
 }
 
 export const modes = [Mode.Dev, Mode.Staging, Mode.Prod];
