@@ -1,6 +1,7 @@
 export interface Portfolio {
     shares: Share[];
     expiringShares: ExpiringShare[];
+    dividends: Dividend[];
 }
 
 export interface Share {
@@ -9,6 +10,44 @@ export interface Share {
     quantity: number;
     totalPrice: number;
 }
+
+export interface Trade {
+    name: string;
+    time: number;
+    quantity: number;
+    totalPrice: number;
+    type: TradeType;
+}
+
+export enum TradeType {
+    Purchase = 'purchase',
+    Sale = 'sale',
+}
+
+export enum TradeLabel {
+    MarketBuy = 'Market Buy',
+    SellQueue = 'Sell Queue',
+    InstantSell = 'Instant Sell',
+    MatchedInstantSell = 'Matched Instant Sell',
+    Sale = 'Sale',
+}
+
+export interface Dividend {
+    name: string;
+    time: number;
+    quantity: number;
+    total: number;
+    type: DividendType;
+}
+
+export enum DividendType {
+    InPlayCleanSheet = 'In-play clean sheet',
+    InPlayGoal = 'In-play goal',
+    InPlayAssist = 'In-play assist',
+    Media = 'Media',
+    MatchDay = 'Match day',
+}
+export const dividendTypes = Object.values(DividendType);
 
 export interface ExpiringShare {
     name: string;

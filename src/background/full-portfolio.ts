@@ -1,19 +1,82 @@
 import * as moment from 'moment';
 import 'moment/locale/en-gb';
 import { getSimplifiedPortfolio } from "./simplified-portfolio";
-import { ExpiringShare, Portfolio } from "../interfaces";
+import {
+    Dividend,
+    ExpiringShare,
+    Portfolio,
+    Trade,
+    TradeLabel,
+    TradeType,
+    DividendType
+} from "../interfaces";
 
-enum TradeLabel {
-    MarketBuy = 'Market Buy',
-    SellQueue = 'Sell Queue',
-    InstantSell = 'Instant Sell',
-    MatchedInstantSell = 'Matched Instant Sell',
-    Sale = 'Sale',
+interface DividendTransaction {
+    id: number;
+    userId: number;
+    total: number;
+    qty: number;
+    type: string;
+    name: string;
+    balance: number;
+    transactiondate: number | string;
+    subtype: RawDividendType;
+    dividendsId: number;
 }
 
-enum TradeType {
-    Purchase = 'purchase',
-    Sale = 'sale',
+enum RawDividendType {
+    InPlayCleanSheet = 'DIVIDENDS_IN_PLAY_CLEAN_SHEET',
+    InPlayGoal = 'DIVIDENDS_IN_PLAY_GOAL',
+    InPlayAssist = 'DIVIDENDS_IN_PLAY_ASSIST',
+    Media = 'DIVIDENDS_MEDIA',
+    MatchDay = 'DIVIDENDS_PLAYER_STATS',
+}
+const rawDividendTypes = Object.values(RawDividendType);
+
+export function rawDividendTypeToDividendType(rawDividendType: RawDividendType): DividendType {
+    switch(rawDividendType) {
+        case RawDividendType.InPlayCleanSheet:
+            return DividendType.InPlayCleanSheet;
+        case RawDividendType.InPlayGoal:
+            return DividendType.InPlayGoal;
+        case RawDividendType.InPlayAssist:
+            return DividendType.InPlayAssist;
+        case RawDividendType.Media:
+            return DividendType.Media;
+        case RawDividendType.MatchDay:
+            return DividendType.MatchDay;
+    }
+}
+
+
+interface TradeTransaction {
+    id: number;
+    userId: number;
+    total: number;
+    qty: number;
+    type: 'SALE' | 'PURCHASE';
+    name: string;
+    balance: number;
+    transactiondate: number | string;
+    tradeId: number;
+}
+
+function isDividendTransaction(transaction: any): transaction is DividendTransaction {
+    return transaction.dividendsId !== undefined;
+}
+
+function isTradeTransaction(transaction: any): transaction is TradeTransaction {
+    return transaction.tradeId !== undefined && (transaction.type === 'SALE' || transaction.type === 'PURCHASE');
+}
+
+type Transaction = DividendTransaction | TradeTransaction;
+
+interface TransactionsResponse {
+    count: number;
+    items: Transaction[];
+    page: number;
+    per_page: number;
+    total: number;
 }
 
 interface TradeResponse {
@@ -48,13 +111,54 @@ interface TradeItem {
     name: string;
 }
 
-interface Trade {
-    name: string;
-    playerId: string;
-    time: number;
-    quantity: number;
-    totalPrice: number;
-    type: TradeType;
+async function getTransactions(accessToken: string): Promise<[Trade[], Dividend[]]> {
+    const trades: Trade[] = [];
+    const dividends: Dividend[] = [];
+
+    let noTradesLeft = false;
+    let page = 1;
+    while(!noTradesLeft) {
+        const transactionsResponse = <TransactionsResponse> await (await fetch(`https://api-prod.footballindex.co.uk/transactions?page=${page++}&per_page=1000`, {
+            headers: {
+                'x-access-token': accessToken,
+                'x-client-type': 'responsive-tablet',
+                'Referer': 'https://www.footballindex.co.uk/account/trades',
+                'Accept': 'application/json, text/plain, */*',
+            },
+        })).json();
+
+        if(transactionsResponse.items.length === 0) {
+            noTradesLeft = true;
+            break;
+        }
+
+        for(const transaction of transactionsResponse.items) {
+            if(isDividendTransaction(transaction)) {
+                dividends.push({
+                    name: transaction.name,
+                    time: moment(transaction.transactiondate).valueOf(),
+                    quantity: transaction.qty,
+                    total: transaction.total,
+                    type: rawDividendTypeToDividendType(transaction.subtype),
+                });
+            } else if(isTradeTransaction(transaction)) {
+                trades.push({
+                    name: transaction.name,
+                    time: moment(transaction.transactiondate).valueOf(),
+                    quantity: transaction.qty,
+                    totalPrice: transaction.total,
+                    type: transaction.type === 'SALE' ? TradeType.Sale : TradeType.Purchase,
+                })
+            } else {
+                continue;
+            }
+            transaction.transactiondate = moment(transaction.transactiondate).valueOf();
+        }
+    }
+
+    console.log(dividends);
+
+    return [trades, dividends];
 }
 
 async function getTrades(accessToken: string): Promise<Trade[]> {
@@ -80,7 +184,7 @@ async function getTrades(accessToken: string): Promise<Trade[]> {
         for(const tradeItem of tradeResponse.items) {
             trades.push({
                 name: tradeItem.name,
-                playerId: tradeItem.code,
+                // playerId: tradeItem.code,
                 time: moment(tradeItem.txDate).valueOf(),
                 type: tradeItem.type,
                 totalPrice: Math.round(tradeItem.total * 100),
@@ -100,25 +204,29 @@ const shareSplits: { time: number, split: number }[] = [
 ];
 
 export async function getFullPortfolio(accessToken: string): Promise<Portfolio> {
-    // Sort trades from new to old
-    const trades = (await getTrades(accessToken)).sort((a, b) => b.time - a.time);
+    // Sort from new to old
+    let [trades, dividends] = await getTransactions(accessToken);
+    trades = trades.sort((a, b) => b.time - a.time);
+    // dividends = dividends.sort((a, b) => b.time - a.time);
 
-    const quantityByPlayerId: { [playerId: string]: number } = {};
-    const checkedQuantityByPlayerId: { [playerId: string]: number } = {};
-    const checkPlayerIds: string[] = [];
-    const stopCheckingPlayerIds: string[] = [];
+    const quantityByPlayer: { [playerName: string]: number } = {};
+    const checkedQuantityByPlayer: { [playerName: string]: number } = {};
+    const checkPlayers: string[] = [];
+    const stopCheckingPlayers: string[] = [];
 
     const simplifiedPortfolio = await getSimplifiedPortfolio(accessToken);
-    for(const { playerId, quantity } of simplifiedPortfolio.shares) {
-        quantityByPlayerId[playerId] = quantity;
-        checkedQuantityByPlayerId[playerId] = 0;
-        checkPlayerIds.push(playerId);
+    for(const { name, quantity } of simplifiedPortfolio.shares) {
+        quantityByPlayer[name] = quantity;
+        checkedQuantityByPlayer[name] = 0;
+        checkPlayers.push(name);
     }
+
+    dividends = dividends.filter(dividend => checkPlayers.indexOf(dividend.name) > 0).sort((a, b) => b.time - a.time);
 
     const expiringShares: ExpiringShare[] = [];
     for(const trade of trades) {
-        const { playerId } = trade;
-        if(trade.type === TradeType.Sale || stopCheckingPlayerIds.indexOf(playerId) > -1 || checkPlayerIds.indexOf(playerId) === -1) {
+        const { name } = trade;
+        if(trade.type === TradeType.Sale || stopCheckingPlayers.indexOf(name) > -1 || checkPlayers.indexOf(name) === -1) {
             continue;
         }
 
@@ -128,7 +236,7 @@ export async function getFullPortfolio(accessToken: string): Promise<Portfolio> 
             }
         }
 
-        const quantity = checkedQuantityByPlayerId[playerId] + trade.quantity > quantityByPlayerId[playerId] ? quantityByPlayerId[playerId] - checkedQuantityByPlayerId[playerId] : trade.quantity;
+        const quantity = checkedQuantityByPlayer[name] + trade.quantity > quantityByPlayer[name] ? quantityByPlayer[name] - checkedQuantityByPlayer[name] : trade.quantity;
         expiringShares.push({
             name: trade.name,
             quantity,
@@ -136,12 +244,12 @@ export async function getFullPortfolio(accessToken: string): Promise<Portfolio> 
             buyTime: trade.time,
         });
 
-        checkedQuantityByPlayerId[playerId] += trade.quantity;
+        checkedQuantityByPlayer[name] += trade.quantity;
 
-        if(checkedQuantityByPlayerId[playerId] >= quantityByPlayerId[playerId]) {
-            stopCheckingPlayerIds.push(trade.playerId);
+        if(checkedQuantityByPlayer[name] >= quantityByPlayer[name]) {
+            stopCheckingPlayers.push(trade.name);
 
-            if(stopCheckingPlayerIds.length === checkPlayerIds.length) {
+            if(stopCheckingPlayers.length === checkPlayers.length) {
                 break;
             }
         }
@@ -150,5 +258,6 @@ export async function getFullPortfolio(accessToken: string): Promise<Portfolio> 
     return {
         shares: simplifiedPortfolio.shares,
         expiringShares,
+        dividends,
     };
 }

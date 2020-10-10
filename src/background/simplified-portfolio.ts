@@ -33,6 +33,7 @@ export async function getSimplifiedPortfolio(accessToken: string): Promise<Portf
     const portfolio: Portfolio = {
         shares: [],
         expiringShares: [],
+        dividends: [],
     };
 
     for(const key in summaryData.totals) {
