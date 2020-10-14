@@ -95,14 +95,14 @@ interface TradeItem {
     shareQty: number;
     total: number;
     status: string;
-    type: TradeType;
+    type: "sale" | "purchase";
     orderType: string;
     meta?: any;
     txDate: string;
     createdAt: string;
     isPartialFill: boolean;
     exchangeOrderUuid?: any;
-    label: TradeLabel;
+    label: "Matched Instant Sell" | "Matched Bid" | "Matched Offer" | "Sell Queue" | "Market Buy" | "Sale";
     updatedAt: string;
     code: string;
     thumbnailImage: string;
@@ -111,8 +111,7 @@ interface TradeItem {
     name: string;
 }
 
-async function getTransactions(accessToken: string): Promise<[Trade[], Dividend[]]> {
-    const trades: Trade[] = [];
+async function getDividends(accessToken: string): Promise<Dividend[]> {
     const dividends: Dividend[] = [];
 
     let noTradesLeft = false;
@@ -141,24 +140,11 @@ async function getTransactions(accessToken: string): Promise<[Trade[], Dividend[
                     total: transaction.total,
                     type: rawDividendTypeToDividendType(transaction.subtype),
                 });
-            } else if(isTradeTransaction(transaction)) {
-                trades.push({
-                    name: transaction.name,
-                    time: moment(transaction.transactiondate).valueOf(),
-                    quantity: transaction.qty,
-                    totalPrice: transaction.total,
-                    type: transaction.type === 'SALE' ? TradeType.Sale : TradeType.Purchase,
-                })
-            } else {
-                continue;
             }
-            transaction.transactiondate = moment(transaction.transactiondate).valueOf();
         }
     }
 
-    console.log(dividends);
-
-    return [trades, dividends];
+    return dividends;
 }
 
 async function getTrades(accessToken: string): Promise<Trade[]> {
@@ -186,7 +172,7 @@ async function getTrades(accessToken: string): Promise<Trade[]> {
                 name: tradeItem.name,
                 // playerId: tradeItem.code,
                 time: moment(tradeItem.txDate).valueOf(),
-                type: tradeItem.type,
+                type: tradeItem.type == 'sale' ? TradeType.Sale : TradeType.Purchase,
                 totalPrice: Math.round(tradeItem.total * 100),
                 quantity: tradeItem.shareQty,
             });
@@ -204,13 +190,16 @@ const shareSplits: { time: number, split: number }[] = [
 ];
 
 export async function getFullPortfolio(accessToken: string): Promise<Portfolio> {
+    let trades = await getTrades(accessToken);
+    let dividends = await getDividends(accessToken);
+
     // Sort from new to old
-    let [trades, dividends] = await getTransactions(accessToken);
     trades = trades.sort((a, b) => b.time - a.time);
-    // dividends = dividends.sort((a, b) => b.time - a.time);
+    dividends = dividends.sort((a, b) => b.time - a.time);
 
     const quantityByPlayer: { [playerName: string]: number } = {};
     const checkedQuantityByPlayer: { [playerName: string]: number } = {};
+    const firstPurchaseTimeByPlayer: { [playerName: string]: number } = {};
     const checkPlayers: string[] = [];
     const stopCheckingPlayers: string[] = [];
 
@@ -221,15 +210,25 @@ export async function getFullPortfolio(accessToken: string): Promise<Portfolio> 
         checkPlayers.push(name);
     }
 
-    dividends = dividends.filter(dividend => checkPlayers.indexOf(dividend.name) > 0).sort((a, b) => b.time - a.time);
-
     const expiringShares: ExpiringShare[] = [];
     for(const trade of trades) {
         const { name } = trade;
-        if(trade.type === TradeType.Sale || stopCheckingPlayers.indexOf(name) > -1 || checkPlayers.indexOf(name) === -1) {
+
+        //    if the this player is not one of the players curently held in the portfolio
+        // OR the trade is a sell trade
+        // OR we have already finished checking this player
+        // --> continue to next iteration
+        if(checkPlayers.indexOf(name) === -1 || trade.type === TradeType.Sale || stopCheckingPlayers.indexOf(name) > -1) {
             continue;
         }
 
+        // Update the first purchase time of this player if it wasn't already set
+        // or if this time is earlier than the previous set one
+        if(firstPurchaseTimeByPlayer[name] === undefined || trade.time < firstPurchaseTimeByPlayer[name]) {
+            firstPurchaseTimeByPlayer[name] = trade.time;
+        }
+
+        // Change trade quantity to reflect share splits
         for(const shareSplit of shareSplits) {
             if(trade.time < shareSplit.time) {
                 trade.quantity = trade.quantity * shareSplit.split;
@@ -238,7 +237,7 @@ export async function getFullPortfolio(accessToken: string): Promise<Portfolio> 
 
         const quantity = checkedQuantityByPlayer[name] + trade.quantity > quantityByPlayer[name] ? quantityByPlayer[name] - checkedQuantityByPlayer[name] : trade.quantity;
         expiringShares.push({
-            name: trade.name,
+            name: name,
             quantity,
             totalPrice: Math.round((trade.totalPrice / trade.quantity) * quantity),
             buyTime: trade.time,
@@ -255,9 +254,25 @@ export async function getFullPortfolio(accessToken: string): Promise<Portfolio> 
         }
     }
 
+    // Only include relevant dividends
+    // i.e. dividends of currently held players and dividends
+    // that were paid out after the first purchase (that's being held in the portfolio) of that player
+    const filteredDividends: Dividend[] = [];
+    for(const dividend of dividends) {
+        const { name } = dividend;
+
+        if(checkPlayers.indexOf(name) === -1) {
+            continue;
+        }
+
+        if(dividend.time > firstPurchaseTimeByPlayer[name]) {
+            filteredDividends.push(dividend);
+        }
+    }
+
     return {
         shares: simplifiedPortfolio.shares,
         expiringShares,
-        dividends,
+        dividends: filteredDividends,
     };
 }
