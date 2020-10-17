@@ -184,7 +184,7 @@ async function getTrades(accessToken: string): Promise<Trade[]> {
 
 const shareSplits: { time: number, split: number }[] = [
     {
-        time: 1553558400, // 26 March 2019
+        time: 1553558400 * 1000, // 26 March 2019
         split: 3,
     },
 ];
@@ -214,7 +214,7 @@ export async function getFullPortfolio(accessToken: string): Promise<Portfolio> 
     for(const trade of trades) {
         const { name } = trade;
 
-        //    if the this player is not one of the players curently held in the portfolio
+        //    if the this player is not one of the players currently held in the portfolio
         // OR the trade is a sell trade
         // OR we have already finished checking this player
         // --> continue to next iteration
@@ -231,7 +231,7 @@ export async function getFullPortfolio(accessToken: string): Promise<Portfolio> 
         // Change trade quantity to reflect share splits
         for(const shareSplit of shareSplits) {
             if(trade.time < shareSplit.time) {
-                trade.quantity = trade.quantity * shareSplit.split;
+                trade.quantity *= shareSplit.split;
             }
         }
 
